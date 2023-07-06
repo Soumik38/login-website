@@ -4,7 +4,7 @@ const bodyParser=require("body-parser")
 const ejs=require("ejs")
 const app=express()
 const mongoose=require("mongoose")
-const encrypt=require("mongoose-encryption")
+const md5=require("md5")
 mongoose.connect("mongodb://0.0.0.0/userDB").then(console.log("connected to database"))
 app.set('view engine','ejs')
 app.use(bodyParser.urlencoded({extended:true}))
@@ -14,8 +14,6 @@ const userSchema=new mongoose.Schema({
     email:String,
     password:String
 })
-
-userSchema.plugin(encrypt,{secret:process.env.SECRET,encryptedFeilds:["password"]})
 
 const User=new mongoose.model("User",userSchema)
 
@@ -32,7 +30,7 @@ app.route("/login")
     User.find({}).then(function(found){
         found.forEach(function(i){
             if(i.email===req.body.email){
-                if(i.password===req.body.password) {
+                if(i.password===md5(req.body.password)) {
                     console.log("Authenticated")
                     res.render("secrets")
                 }else{
@@ -52,7 +50,7 @@ app.route("/register")
     if (req.body.password===req.body.password_confirm) {
         const newUser=new User({
             email:req.body.email,
-            password:req.body.password
+            password:md5(req.body.password)
         })
         console.log(newUser)
         newUser.save().then(res.render("secrets"))
