@@ -4,7 +4,8 @@ const bodyParser=require("body-parser")
 const ejs=require("ejs")
 const app=express()
 const mongoose=require("mongoose")
-const md5=require("md5")
+const bcrypt=require("bcrypt")
+const saltRounds=10
 mongoose.connect("mongodb://0.0.0.0/userDB").then(console.log("connected to database"))
 app.set('view engine','ejs')
 app.use(bodyParser.urlencoded({extended:true}))
@@ -30,13 +31,15 @@ app.route("/login")
     User.find({}).then(function(found){
         found.forEach(function(i){
             if(i.email===req.body.email){
-                if(i.password===md5(req.body.password)) {
-                    console.log("Authenticated")
-                    res.render("secrets")
-                }else{
-                    console.log("Wrong password")
-                    res.redirect("/login")
-                }
+                bcrypt.compare(req.body.password,i.password, function(err, result) {
+                    if (result===true) {
+                        console.log("Authenticated")
+                        res.render("secrets")
+                    }else{
+                        console.log("Wrong password")
+                        res.redirect("/login")
+                    }
+                })
             }
         })
     })
@@ -48,12 +51,15 @@ app.route("/register")
 })
 .post(function(req,res){
     if (req.body.password===req.body.password_confirm) {
-        const newUser=new User({
-            email:req.body.email,
-            password:md5(req.body.password)
+        bcrypt.genSalt(saltRounds, function(err, salt) {
+            bcrypt.hash(req.body.password,saltRounds, function(err, hash) {
+                const newUser=new User({
+                    email:req.body.email,
+                    password:hash
+                })
+                newUser.save().then(res.render("secrets"))
+            })
         })
-        console.log(newUser)
-        newUser.save().then(res.render("secrets"))
     }
 })
 
